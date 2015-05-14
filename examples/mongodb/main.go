@@ -1,3 +1,5 @@
+// This file really isn't an example of how to use mgo.
+// It exists to try to cause/ analyse problems
 package main
 
 import (
