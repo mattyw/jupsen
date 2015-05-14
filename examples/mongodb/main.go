@@ -24,6 +24,20 @@ type Stats struct {
 	Fail     int
 }
 
+type IsPrimaryResults struct {
+	PrimaryAddress string `bson:"primary"`
+}
+
+func IsPrimary(session *mgo.Session) (string, error) {
+	results := &IsPrimaryResults{}
+	err := session.Run("isMaster", results)
+	if err != nil {
+		return "", err
+	}
+
+	return results.PrimaryAddress, nil
+}
+
 func WriteList(c *mgo.Collection, id string, count int) Stats {
 	stats := Stats{}
 
@@ -74,6 +88,12 @@ func main() {
 		Id:      "my-list",
 		Numbers: []int{},
 	}
+
+	primary, err := IsPrimary(session)
+	if err != nil {
+		log.Fatalf("failed to find primary: %v\n", err)
+	}
+	fmt.Printf("primary is on ip %v\n", primary)
 
 	c := session.DB("jupsen").C("list")
 	err = c.Insert(&list)
