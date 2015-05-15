@@ -44,11 +44,11 @@ func WriteList(c *mgo.Collection, id string, count int) Stats {
 	stats := Stats{}
 
 	for i := 0; i < count; i++ {
-		//TODO NO
 		err := c.Update(bson.M{"_id": id}, bson.M{"$push": bson.M{"numbers": i}})
 		if err != nil {
 			stats.Fail += 1
 			log.Printf("failed update: %v\n", err)
+			//TODO This isn't a good way of making a new session
 			newSession := c.Database.Session.Copy()
 			c.Database.Session.Close()
 			c.Database.Session = newSession
@@ -85,7 +85,8 @@ func main() {
 	}
 	defer session.Close()
 
-	session.EnsureSafe(&mgo.Safe{W: 1, FSync: false})
+	//session.EnsureSafe(&mgo.Safe{W: 1, FSync: true})
+	session.EnsureSafe(&mgo.Safe{WMode: "majority", W: 1, FSync: true})
 	list := List{
 		Id:      "my-list",
 		Numbers: []int{},
