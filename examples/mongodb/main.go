@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	url   = flag.String("url", "localhost:27017", "url of the mongoserver")
-	count = flag.Int("count", 6000, "number of list items")
+	url      = flag.String("url", "localhost:27017", "url of the mongoserver")
+	count    = flag.Int("count", 6000, "number of list items")
+	majority = flag.Bool("majority", true, `use WMode="majority"`)
 )
 
 type List struct {
@@ -41,18 +42,23 @@ func IsPrimary(session *mgo.Session) (string, error) {
 	return results.PrimaryAddress, nil
 }
 
-func WriteList(c *mgo.Collection, id string, count int) Stats {
+func collection(session *mgo.Session) *mgo.Collection {
+	return session.DB("jupsen").C("list")
+}
+
+func WriteList(session *mgo.Session, id string, count int) Stats {
 	stats := Stats{}
 
+	s := session.Copy()
+	defer s.Close()
 	for i := 0; i < count; i++ {
+		c := collection(s)
 		err := c.Update(bson.M{"_id": id}, bson.M{"$push": bson.M{"numbers": i}})
 		if err != nil {
 			stats.Fail += 1
 			log.Printf("failed update: %v\n", err)
-			//TODO This isn't a good way of making a new session
-			newSession := c.Database.Session.Copy()
-			c.Database.Session.Close()
-			c.Database.Session = newSession
+
+			s.Refresh()
 			continue
 		}
 		stats.Pass += 1
@@ -64,8 +70,11 @@ func WriteList(c *mgo.Collection, id string, count int) Stats {
 	return stats
 }
 
-func Compare(c *mgo.Collection, id string, stats Stats) {
-	//TODO New session here couldn't hurt
+func Compare(session *mgo.Session, id string, stats Stats) {
+	s := session.Copy()
+	defer s.Close()
+	c := collection(s)
+
 	var result List
 	err := c.Find(bson.M{"_id": id}).One(&result)
 	if err != nil {
@@ -86,8 +95,12 @@ func main() {
 	}
 	defer session.Close()
 
-	//session.EnsureSafe(&mgo.Safe{W: 1, FSync: true})
-	session.EnsureSafe(&mgo.Safe{WMode: "majority", W: 1, FSync: true})
+	if *majority {
+		session.EnsureSafe(&mgo.Safe{WMode: "majority", W: 1, FSync: true})
+	} else {
+		session.EnsureSafe(&mgo.Safe{W: 1, FSync: true})
+	}
+
 	list := List{
 		Id:      "my-list",
 		Numbers: []int{},
@@ -99,17 +112,18 @@ func main() {
 	}
 	fmt.Printf("primary is on ip %v\n", primary)
 
-	c := session.DB("jupsen").C("list")
-	err = c.Insert(&list)
-	if err != nil {
-		log.Fatalf("failed to set starting point: %v\n", err)
-	}
-
-	stats := WriteList(c, list.Id, *count)
-	Compare(c, list.Id, stats)
+	c := collection(session)
 
 	err = c.DropCollection()
 	if err != nil {
 		log.Fatalf("failed to drop collection: %v", err)
 	}
+
+	err = c.Insert(&list)
+	if err != nil {
+		log.Fatalf("failed to set starting point: %v\n", err)
+	}
+
+	stats := WriteList(session, list.Id, *count)
+	Compare(session, list.Id, stats)
 }
