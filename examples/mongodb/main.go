@@ -57,8 +57,6 @@ func WriteList(session *mgo.Session, id string, count int) Stats {
 			stats.Fail += 1
 			log.Printf("failed update: %v\n", err)
 
-			//s.Close()
-			//s = session.Copy()
 			s.Refresh()
 			continue
 		}

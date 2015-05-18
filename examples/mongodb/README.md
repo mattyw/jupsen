@@ -1,8 +1,20 @@
 This example is desgined to be run on a mongo replicaset.
 
-### Deploy 5 mongodb units
+### Deploy mongodb units
 
-juju deploy mongodb -n 5
+Typically you should first deploy two units:
+
+`juju deploy mongodb -n 2`
+
+Optionally set the replica set name,
+
+`juju set mongodb replicaset=mycluster`
+
+And then deploy more:
+
+`juju add-unit mongodb -n 3`
+
+See the [mongodb charm README](https://jujucharms.com/mongodb/trusty#readme) for details.
 
 ### Craft a connection URL
 
