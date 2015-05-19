@@ -3,11 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gopkg.in/mgo.v2"
 	"log"
+	"time"
+
+	"gopkg.in/mgo.v2"
 )
 
-var url = flag.String("url", "localhost:27017", "url of the mongoserver")
+var (
+	url   = flag.String("url", "localhost:27017", "url of the mongoserver")
+	watch = flag.Duration("watch", 0, "The interval at which to query the cluster for the primary")
+)
 
 type IsPrimaryResults struct {
 	PrimaryAddress string `bson:"primary"`
@@ -31,9 +36,16 @@ func main() {
 	}
 	defer session.Close()
 
-	primary, err := IsPrimary(session)
-	if err != nil {
-		log.Fatalf("failed to find primary: %v\n", err)
+	for {
+		primary, err := IsPrimary(session)
+		if err != nil {
+			log.Fatalf("failed to find primary: %v\n", err)
+		}
+		if *watch == 0 {
+			fmt.Printf("%v\n", primary)
+			break
+		}
+		log.Println(primary)
+		time.Sleep(*watch)
 	}
-	fmt.Printf("%v", primary)
 }
