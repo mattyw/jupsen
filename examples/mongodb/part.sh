@@ -1,3 +1,7 @@
+# To use this script in the simplest way:
+# PRIMARY=mongodb/0 ./part.sh
+# Will create a partition around mongodb/0 and one other node
+
 #!/bin/bash -ex
 
 if [ -z "$DELAY" ]; then
