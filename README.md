@@ -20,7 +20,7 @@ juju jupsen heal wordpress/0 mysql/0
 ## Install
 
 ```
-go install github.com/mattyw/jupsen/...
+go install github.com/mattyw/jupsen/juju-jupsen/...
 ```
 
 ## Running
