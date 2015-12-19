@@ -16,7 +16,6 @@ import (
 
 var commandDoc = `
 Jupsen is used to cause network failures in juju environments.
-All hail eris
 `
 
 func main() {
